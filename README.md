@@ -1,5 +1,5 @@
 # Unity IAP Store
-![npm](https://img.shields.io/npm/v/extensions.unity.iap.store)
+![npm](https://img.shields.io/npm/v/extensions.unity.iap.store) ![License](https://img.shields.io/github/license/IvanMurzak/Unity-IAP-Store) [![Stand With Ukraine](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/badges/StandWithUkraine.svg)](https://stand-with-ukraine.pp.ua)
 
 ![image](https://user-images.githubusercontent.com/9135028/182879404-d7cbc547-5f3d-4b08-9185-fcaf10b0080c.png)
 
@@ -20,14 +20,21 @@ Powerful Store manager for Unity project. You have codeless products management 
 - ✔️ drawer adapter for showing all items from specific category in Unity UI with ability to override for any other UI system
 
 
-# How to install
+# How to install - Option 1 (RECOMMENDED)
+
+- Install [ODIN Inspector](https://odininspector.com/)
+- Install [OpenUPM-CLI](https://github.com/openupm/openupm-cli#installation)
+- Open command line in Unity project folder
+- `openupm --registry https://registry.npmjs.org add extensions.unity.iap.store`
+
+# How to install - Option 2
 
 - Install [ODIN Inspector](https://odininspector.com/)
 - Add this code to <code>/Packages/manifest.json</code>
 ```json
 {
   "dependencies": {
-    "extensions.unity.iap.store": "2.3.6",
+    "extensions.unity.iap.store": "4.4.1",
   },
   "scopedRegistries": [
     {
@@ -43,13 +50,6 @@ Powerful Store manager for Unity project. You have codeless products management 
       "scopes": [
         "com.cysharp",
         "com.neuecc"
-      ]
-    },
-    {
-      "name": "Packages from jillejr",
-      "url": "https://npm.cloudsmith.io/jillejr/newtonsoft-json-for-unity/",
-      "scopes": [
-        "jillejr"
       ]
     }
   ]

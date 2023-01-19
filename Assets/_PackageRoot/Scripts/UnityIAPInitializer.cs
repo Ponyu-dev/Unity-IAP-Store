@@ -22,6 +22,9 @@ namespace Project.Store
 
 								Subject<TransactionContainer>									onProductPurchasingFailed		= new Subject<TransactionContainer>();
 		public					IObservable<TransactionContainer>								OnProductPurchasingFailed		=> onProductPurchasingFailed == null ? onProductPurchasingFailed = new Subject<TransactionContainer>() : onProductPurchasingFailed;
+
+								Subject<bool>													onRestorePurchasesCompleted		= new Subject<bool>();
+		public					IObservable<bool>												OnRestorePurchasesCompleted		=> onRestorePurchasesCompleted == null ? onRestorePurchasesCompleted = new Subject<bool>() : onRestorePurchasesCompleted;
 	
 		public					bool															useFakeStore;
 		[ShowIf("useFakeStore")]
@@ -86,17 +89,46 @@ namespace Project.Store
 		public		virtual		void															RestorePurchases				()
         {
 			Debug.Log($"RestorePurchases");
+
+			var nonConsumableProducts = controller.products.all
+				.Where(product => product.definition.type == ProductType.NonConsumable)
+				.Where(product => !product.hasReceipt)
+				.ToDictionary(product => product.definition.id);
+
 			extensionsApple?.RestoreTransactions(success =>
 			{
 				Debug.Log($"Restore Transactions completed with status:{(success ? "success" : "failed")}");
+				if (success) InvalidateRestoredProducts(nonConsumableProducts);
+				onRestorePurchasesCompleted.OnNext(success);
 			});
 			extensionsGooglePlayStore?.RestoreTransactions(success =>
 			{
 				Debug.Log($"Restore Transactions completed with status:{(success ? "success" : "failed")}");
+				if (success) InvalidateRestoredProducts(nonConsumableProducts);
+				onRestorePurchasesCompleted.OnNext(success);
 			});
 			extensionsMicrosoft?.RestoreTransactions();
 			// extensionsUDP does not exist in UDP API
 			// extensionsAmazon not supported by Amazon
+		}
+		protected	virtual		void															InvalidateRestoredProducts(Dictionary<string, Product> nonConsumableProducts)
+        {
+			var newNonConsumableProducts = controller.products.all
+				.Where(product => product.definition.type == ProductType.NonConsumable)
+				.Where(product => product.hasReceipt)
+				.ToList();
+
+			foreach (var product in newNonConsumableProducts)
+			{
+				if (nonConsumableProducts.ContainsKey(product.definition.id))
+				{
+					onProductPurchased.OnNext(new TransactionContainer()
+					{
+						productId = product.definition.id,
+						transactionId = product.transactionID
+					});
+				}
+			}
 		}
 
 		protected	virtual		IEnumerable<Func<PurchaseEventArgs, PurchaseProcessingResult>>	PurchaseProcessors				=> new Func<PurchaseEventArgs, PurchaseProcessingResult>[] 
@@ -157,7 +189,11 @@ namespace Project.Store
 		}
 		public		virtual		PurchaseProcessingResult										ProcessPurchase					(PurchaseEventArgs e)
 		{
-			var transaction = new TransactionContainer() { productId = e.purchasedProduct.definition.id, transactionId = e.purchasedProduct.transactionID };
+			var transaction = new TransactionContainer() 
+			{ 
+				productId		= e.purchasedProduct.definition.id, 
+				transactionId	= e.purchasedProduct.transactionID 
+			};
 			foreach (var purchaseProcessor in PurchaseProcessors)
 			{
 				var result = purchaseProcessor(e);
@@ -171,10 +207,15 @@ namespace Project.Store
 			onProductPurchasingFailed.OnNext(transaction);
 			return PurchaseProcessingResult.Pending;
 		}
-		public		virtual		void															OnPurchaseFailed				(Product i, PurchaseFailureReason p)
+		public		virtual		void															OnPurchaseFailed				(Product i, PurchaseFailureReason failureReason)
 		{
 			Debug.LogError($"purchase id={i.definition.id}");
-			onProductPurchasingFailed.OnNext(new TransactionContainer() { productId = i.definition.id, transactionId = i.transactionID });
+			onProductPurchasingFailed.OnNext(new TransactionContainer()
+			{ 
+				productId		= i.definition.id, 
+				transactionId	= i.transactionID,
+				failureReason	= failureReason
+			});
 		}
 	}
 }
